@@ -61,29 +61,29 @@ static void usbmidi_data_rx_cb(usbd_device* dev, uint8_t ep)
   /* SysEx identity message, preformatted with correct USB framing information */
   const uint8_t sysex_identity[] =
   {
-  0x04,   /* USB Framing (3 byte SysEx) */
-  0xf0,   /* SysEx start */
-  0x7e,   /* non-realtime */
-  0x00,   /* Channel 0 */
-  0x04,   /* USB Framing (3 byte SysEx) */
-  0x7d,   /* Educational/prototype manufacturer ID */
-  0x66,   /* Family code (byte 1) */
-  0x66,   /* Family code (byte 2) */
-  0x04,   /* USB Framing (3 byte SysEx) */
-  0x51,   /* Model number (byte 1) */
-  0x19,   /* Model number (byte 2) */
-  0x00,   /* Version number (byte 1) */
-  0x04,   /* USB Framing (3 byte SysEx) */
-  0x00,   /* Version number (byte 2) */
-  0x01,   /* Version number (byte 3) */
-  0x00,   /* Version number (byte 4) */
-  0x05,   /* USB Framing (1 byte SysEx) */
-  0xf7,   /* SysEx end */
-  0x00,   /* Padding */
-  0x00,   /* Padding */
+    0x04,   /* USB Framing (3 byte SysEx) */
+    0xf0,   /* SysEx start */
+    0x7e,   /* non-realtime */
+    0x00,   /* Channel 0 */
+    0x04,   /* USB Framing (3 byte SysEx) */
+    0x7d,   /* Educational/prototype manufacturer ID */
+    0x66,   /* Family code (byte 1) */
+    0x66,   /* Family code (byte 2) */
+    0x04,   /* USB Framing (3 byte SysEx) */
+    0x51,   /* Model number (byte 1) */
+    0x19,   /* Model number (byte 2) */
+    0x00,   /* Version number (byte 1) */
+    0x04,   /* USB Framing (3 byte SysEx) */
+    0x00,   /* Version number (byte 2) */
+    0x01,   /* Version number (byte 3) */
+    0x00,   /* Version number (byte 4) */
+    0x05,   /* USB Framing (1 byte SysEx) */
+    0xf7,   /* SysEx end */
+    0x00,   /* Padding */
+    0x00,   /* Padding */
   };
-  
-  
+
+
   static bool keys[128] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   char buf[64];
@@ -139,82 +139,30 @@ static void usbmidi_data_rx_cb(usbd_device* dev, uint8_t ep)
     }
   }
 }
-
-bool configured = false;
-
 static void usbmidi_set_config(usbd_device* dev, uint16_t wValue)
 {
-  
-
-    
-
-    usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
+  //receive on this endpoint
+  usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
                 usbmidi_data_rx_cb);
-    usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+  //send on this endpoint
+  usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 
-    //systick init
-    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-    // SysTick interrupt every N clock pulses: set reload to N-1
-    systick_set_reload(99999);
-    systick_interrupt_enable();
-    systick_counter_enable();
-    
-    gpio_clear(GPIOC, GPIO13); //led on
-    configured = true;
+  gpio_clear(GPIOC, GPIO13); //led on
 }
 
 
-static void button_send_event(usbd_device *dev, int pressed)
+static void button_send_event(usbd_device* dev, int pressed)
 {
-	char buf[4] = { 0x08, /* USB framing: virtual cable 0, note on */
-			0x80, /* MIDI command: note on, channel 1 */
-			60,   /* Note 60 (middle C) */
-			64,   /* "Normal" velocity */
-	};
+  char buf[4] = { 0x09, /* USB framing: virtual cable 0, note on 0x09 = note on */
+                  0x80, /* MIDI command: note on, channel 1 */
+                  60,   /* Note 60 (middle C) */
+                  64,   /* "Normal" velocity */
+                };
 
-	buf[0] |= pressed;
-	buf[1] |= pressed << 4;
+  buf[0] |= pressed;
+  buf[1] |= pressed << 4;
 
-	while (usbd_ep_write_packet(dev, 0x81, buf, sizeof(buf)) == 0);
-}
-
-void sys_tick_handler(void)
-{
-
-  /* //multichannel read
-      static uint8_t buf[1 + 16];
-      static uint8_t channels[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-
-      for (unsigned int i = 0; i < 8; i++) {
-          uint8_t channel_array[] = { channels[i] };
-          adc_set_regular_sequence(ADC1, 1, channel_array);
-          adc_start_conversion_direct(ADC1);
-          // Wait for end of conversion.
-          while (!(adc_eoc(ADC1)))
-              ;
-
-          uint16_t res = adc_read_regular(ADC1);
-
-          // work with i - res
-      }
-
-  */
-
-//   uint8_t channel_array[16];
-//   uint16_t pot_value = 0;
-
-//   channel_array[0] = 0;
-//   adc_set_regular_sequence(ADC1, 1, channel_array);
-
-//   adc_start_conversion_direct(ADC1);
-//   while(!(adc_eoc(ADC1)));
-//   pot_value = adc_read_regular(ADC1);
-
-  //parallel debug out
-  //gpio_port_write(GPIOB, (pot_value >> 4) << 8);
-
-//   pot_send_event(0, pot_value >> 5); // pot 0, value 0..127
-
+  while(usbd_ep_write_packet(dev, 0x81, buf, sizeof(buf)) == 0);
 }
 
 
@@ -231,26 +179,26 @@ void Midi::update()
 
 void Midi::init()
 {
-  
+
   /*
   * Table B-1: MIDI Adapter Device Descriptor
   */
-  dev_descr.bLength = USB_DT_DEVICE_SIZE,
-  dev_descr.bDescriptorType = USB_DT_DEVICE,
-  dev_descr.bcdUSB = 0x0200,    /* was 0x0110 in Table B-1 example descriptor */
-  dev_descr.bDeviceClass = 0,   /* device defined at interface level */
-  dev_descr.bDeviceSubClass = 0,
-  dev_descr.bDeviceProtocol = 0,
+  dev_descr.bLength = USB_DT_DEVICE_SIZE;
+  dev_descr.bDescriptorType = USB_DT_DEVICE;
+  dev_descr.bcdUSB = 0x0200;   /* was 0x0110 in Table B-1 example descriptor */
+  dev_descr.bDeviceClass = 0;  /* device defined at interface level */
+  dev_descr.bDeviceSubClass = 0;
+  dev_descr.bDeviceProtocol = 0;
   dev_descr.bMaxPacketSize0 = 64,
-  dev_descr.idVendor = 0x6666,  //vendor id (6666 is for prototype devices)
-  dev_descr.idProduct = 0x4242, //product id (shows up in lsusb)
-  dev_descr.bcdDevice = 0x0100,
-  dev_descr.iManufacturer = 1,  /* index to string desc */
-  dev_descr.iProduct = 2,       /* index to string desc */
-  dev_descr.iSerialNumber = 3,  /* index to string desc */
-  dev_descr.bNumConfigurations = 1,
+            dev_descr.idVendor = 0x6666;  //vendor id (6666 is for prototype devices)
+  dev_descr.idProduct = 0x4242; //product id (shows up in lsusb)
+  dev_descr.bcdDevice = 0x0100;
+  dev_descr.iManufacturer = 1;  /* index to string desc */ //FIXME index is 1-based? wtf?
+  dev_descr.iProduct = 2;       /* index to string desc */
+  dev_descr.iSerialNumber = 3;  /* index to string desc */
+  dev_descr.bNumConfigurations = 1;
 
-  
+
   /* Table B-12: MIDI Adapter Class-specific Bulk OUT Endpoint Descriptor  */
   midi_bulk_endp[0].head.bLength = sizeof(struct usb_midi_endpoint_descriptor);
   midi_bulk_endp[0].head.bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT;
@@ -259,12 +207,12 @@ void Midi::init()
   midi_bulk_endp[0].jack[0].baAssocJackID = 0x01;
 
   /* Table B-14: MIDI Adapter Class-specific Bulk IN Endpoint Descriptor  */
-  midi_bulk_endp[1].head .bLength = sizeof(struct usb_midi_endpoint_descriptor);
-  midi_bulk_endp[1].head .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT;
-  midi_bulk_endp[1].head .bDescriptorSubType = USB_MIDI_SUBTYPE_MS_GENERAL;
-  midi_bulk_endp[1].head .bNumEmbMIDIJack = 1;
+  midi_bulk_endp[1].head.bLength = sizeof(struct usb_midi_endpoint_descriptor);
+  midi_bulk_endp[1].head.bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT;
+  midi_bulk_endp[1].head.bDescriptorSubType = USB_MIDI_SUBTYPE_MS_GENERAL;
+  midi_bulk_endp[1].head.bNumEmbMIDIJack = 1;
   midi_bulk_endp[1].jack[0].baAssocJackID = 0x03;
-  
+
 
   /* Table B-11: MIDI Adapter Standard Bulk OUT Endpoint Descriptor */
   bulk_endp[0].bLength = USB_DT_ENDPOINT_SIZE;
@@ -284,21 +232,21 @@ void Midi::init()
   bulk_endp[1].bInterval = 0x00;
   bulk_endp[1].extra = &midi_bulk_endp[1];
   bulk_endp[1].extralen = sizeof(midi_bulk_endp[1]);
-  
-  
+
+
   /* Table B-4: MIDI Adapter Class-specific AC Interface Descriptor */
   audio_control_functional_descriptors.header_head.bLength = sizeof(struct usb_audio_header_descriptor_head) +
-  1 * sizeof(struct usb_audio_header_descriptor_body);
+      1 * sizeof(struct usb_audio_header_descriptor_body);
   audio_control_functional_descriptors.header_head.bDescriptorType = USB_AUDIO_DT_CS_INTERFACE;
   audio_control_functional_descriptors.header_head.bDescriptorSubtype = USB_AUDIO_TYPE_HEADER;
   audio_control_functional_descriptors.header_head.bcdADC = 0x0100;
   audio_control_functional_descriptors.header_head.wTotalLength =
-  sizeof(struct usb_audio_header_descriptor_head) +
-  1 * sizeof(struct usb_audio_header_descriptor_body);
+    sizeof(struct usb_audio_header_descriptor_head) +
+    1 * sizeof(struct usb_audio_header_descriptor_body);
   audio_control_functional_descriptors.header_head.binCollection = 1;
   audio_control_functional_descriptors.header_body .baInterfaceNr = 0x01;
 
-  
+
 
   /* Table B-6: Midi Adapter Class-specific MS Interface Descriptor */
   midi_streaming_functional_descriptors.header.bLength = sizeof(struct usb_midi_header_descriptor);
@@ -391,20 +339,20 @@ void Midi::init()
   usb_strings[0] = "https://github.com/arneboe/stm32-midi-cmake"; //manufacturer
   usb_strings[1] = "stm32 usb midi"; //product
   usb_strings[2] = "0000000000\0";//serial number //FIXME why do i need the \0? strings are null terminated anyway?
-  
-  
-  
+
+
+
   rcc_periph_clock_enable(RCC_GPIOA);
 
 
-      /* lower hotplug and leave enough time for the host to notice */
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO11 | GPIO12);
-    gpio_clear(GPIOA, GPIO11 || GPIO12);
+  /* lower hotplug and leave enough time for the host to notice */
+  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO11 | GPIO12);
+  gpio_clear(GPIOA, GPIO11 || GPIO12);
 
-    //FIXME use Clock instead
-    for (int i = 0; i < 400000; i++)	/* Wait a bit. */
-        __asm__("nop");
-  
+  //FIXME use Clock instead
+  for(int i = 0; i < 400000; i++)     /* Wait a bit. */
+    __asm__("nop");
+
   usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev_descr, &config,
                        usb_strings, 3,
                        usbd_control_buffer, sizeof(usbd_control_buffer));
