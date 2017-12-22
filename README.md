@@ -2,6 +2,10 @@
 
 Cmake scripts based on https://github.com/StanislavLakhtin/stm32-DS18B20
 
+usb midi based on:
+https://github.com/UA3MQJ/usb-midi-key
+
+
 
 # Build
 
