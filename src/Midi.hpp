@@ -38,8 +38,12 @@ private:
   /* Buffer to be used for control requests. */
   uint8_t usbd_control_buffer[128];
 
+  
   void init();
 public:
+  
+  void send();
+  
   Midi();
   void update();
 };

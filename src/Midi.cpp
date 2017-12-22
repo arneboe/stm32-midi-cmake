@@ -37,6 +37,7 @@
 #include <libopencm3/stm32/pwr.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencmsis/core_cm3.h>
+#include "Clock.hpp"
 
 
 
@@ -139,6 +140,8 @@ static void usbmidi_data_rx_cb(usbd_device* dev, uint8_t ep)
     }
   }
 }
+
+static bool configured = false;
 static void usbmidi_set_config(usbd_device* dev, uint16_t wValue)
 {
   //receive on this endpoint
@@ -148,22 +151,10 @@ static void usbmidi_set_config(usbd_device* dev, uint16_t wValue)
   usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 
   gpio_clear(GPIOC, GPIO13); //led on
+  configured = true;
 }
 
 
-static void button_send_event(usbd_device* dev, int pressed)
-{
-  char buf[4] = { 0x09, /* USB framing: virtual cable 0, note on 0x09 = note on */
-                  0x80, /* MIDI command: note on, channel 1 */
-                  60,   /* Note 60 (middle C) */
-                  64,   /* "Normal" velocity */
-                };
-
-  buf[0] |= pressed;
-  buf[1] |= pressed << 4;
-
-  while(usbd_ep_write_packet(dev, 0x81, buf, sizeof(buf)) == 0);
-}
 
 
 Midi::Midi()
@@ -179,7 +170,7 @@ void Midi::update()
 
 void Midi::init()
 {
-
+  
   /*
   * Table B-1: MIDI Adapter Device Descriptor
   */
@@ -358,5 +349,37 @@ void Midi::init()
                        usbd_control_buffer, sizeof(usbd_control_buffer));
 
   usbd_register_set_config_callback(usbd_dev, usbmidi_set_config);
+}
+
+
+void Midi::send()
+{
+  if(!configured)
+    return;
+  char buf[4] = { 0x0B, // USB framing: virtual cable 0, B = CC message
+                  //midi message:
+                  0xB0, // MIDI command: B = CC, 0 = channel 0 
+                  0x03, // control channel 3
+                  30,   // value [0..127]
+                };
+
+  if(usbd_ep_write_packet(usbd_dev, 0x81, buf, 4) != 4)
+  {
+    //write failed
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+    gpio_toggle(GPIOC, GPIO13);
+    Clock::delayMs(40);
+  }
 }
 

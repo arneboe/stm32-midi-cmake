@@ -3,7 +3,9 @@ cmake_minimum_required(VERSION 3.0)
 
 set(SOURCES 
     main.cpp
-    Midi.cpp)
+    Midi.cpp
+    Clock.cpp
+    Systick.cpp)
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
 add_dependencies(${PROJECT_NAME}.elf libopencm3)

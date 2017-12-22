@@ -17,7 +17,7 @@ set(LD_SCRIPT "${CMAKE_SOURCE_DIR}/libopencm3/lib/stm32/f1/stm32f103x8.ld")
         
 set(STM32F1_FLAGS "-mcpu=cortex-m3 -mthumb -msoft-float")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall ${STM32F1_FLAGS} -std=c99 -Os -ffunction-sections -fdata-sections ")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -Wall --std=c++14 ${STM32F1_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall --std=c++14 ${STM32F1_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LD_SCRIPT} -nostartfiles -lopencm3_stm32f1 -lc -lnosys -Wl,--gc-sections --specs=rdimon.specs") 
 
 function(add_bin_from_elf bin elf)
