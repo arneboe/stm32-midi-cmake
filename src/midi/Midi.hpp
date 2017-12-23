@@ -8,10 +8,9 @@ class Midi
 private:
   usbd_device* usbd_dev;
   usb_device_descriptor dev_descr;
-  // Midi specific endpoint descriptors.
-  usb_midi_endpoint_descriptor midi_bulk_endp[2];
-  usb_endpoint_descriptor bulk_endp[2]; //Standard endpoint descriptors
-  usb_interface_descriptor midi_streaming_iface[1]; //FIXME why size1
+  usb_midi_endpoint_descriptor midi_bulk_endp[2];/* << Midi specific endpoint descriptors */
+  usb_endpoint_descriptor bulk_endp[2]; /* << Standard endpoint descriptors */
+  usb_interface_descriptor midi_streaming_iface[1];
 
   struct
   {
@@ -19,11 +18,9 @@ private:
     struct usb_audio_header_descriptor_body header_body;
   } __attribute__((packed)) audio_control_functional_descriptors;
 
-  usb_interface_descriptor audio_control_iface[1]; //FIXME why size 1
+  usb_interface_descriptor audio_control_iface[1];
 
-  /*
-  * Class-specific MIDI streaming interface descriptor
-  */
+  /*Class-specific MIDI streaming interface descriptor  */
   struct
   {
     struct usb_midi_header_descriptor header;
@@ -35,12 +32,12 @@ private:
 
   usb_config_descriptor config;
   const char* usb_strings[3];
-  /* Buffer to be used for control requests. */
-  uint8_t usbd_control_buffer[128];
+  uint8_t usbd_control_buffer[128]; /* << Buffer to be used for control requests. */
 
-  
   void init();
 public:
+  
+  void sendCC();
   
   void send();
   

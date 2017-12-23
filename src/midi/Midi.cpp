@@ -141,22 +141,6 @@ static void usbmidi_data_rx_cb(usbd_device* dev, uint8_t ep)
   }
 }
 
-static bool configured = false;
-static void usbmidi_set_config(usbd_device* dev, uint16_t wValue)
-{
-  //receive on this endpoint
-  usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
-                usbmidi_data_rx_cb);
-  //send on this endpoint
-  usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
-
-  gpio_clear(GPIOC, GPIO13); //led on
-  configured = true;
-}
-
-
-
-
 Midi::Midi()
 {
   init();
@@ -170,7 +154,6 @@ void Midi::update()
 
 void Midi::init()
 {
-  
   /*
   * Table B-1: MIDI Adapter Device Descriptor
   */
@@ -331,8 +314,6 @@ void Midi::init()
   usb_strings[1] = "stm32 usb midi"; //product
   usb_strings[2] = "0000000000\0";//serial number //FIXME why do i need the \0? strings are null terminated anyway?
 
-
-
   rcc_periph_clock_enable(RCC_GPIOA);
 
 
@@ -340,22 +321,31 @@ void Midi::init()
   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO11 | GPIO12);
   gpio_clear(GPIOA, GPIO11 || GPIO12);
 
-  //FIXME use Clock instead
-  for(int i = 0; i < 400000; i++)     /* Wait a bit. */
-    __asm__("nop");
+  Clock::delayMs(5);
 
   usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev_descr, &config,
                        usb_strings, 3,
                        usbd_control_buffer, sizeof(usbd_control_buffer));
 
-  usbd_register_set_config_callback(usbd_dev, usbmidi_set_config);
+  
+  usbd_register_set_config_callback(usbd_dev, [] (usbd_device* dev, uint16_t wValue)
+  {
+    //receive on this endpoint
+    usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
+                  usbmidi_data_rx_cb);
+    //send on this endpoint
+    usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+  });
+  
+  //FIXME here we should wait for the config lambda to be called, otherwise the user might send
+  //      a message before the endpoints are created. However this is not possible because we cannot
+  //      access object state from within the callback :/
+  
 }
 
 
 void Midi::send()
 {
-  if(!configured)
-    return;
   char buf[4] = { 0x0B, // USB framing: virtual cable 0, B = CC message
                   //midi message:
                   0xB0, // MIDI command: B = CC, 0 = channel 0 

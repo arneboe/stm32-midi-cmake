@@ -21,6 +21,8 @@ int main(void)
   Systick::init();
   Midi m;
   
+  Clock::delayMs(500); //wait for midi end points to be created (see comment in Midi.cpp for why we need this)
+  
   uint32_t lastTime = 0;
 
   while(1)
