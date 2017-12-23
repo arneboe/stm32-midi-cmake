@@ -14,4 +14,4 @@ https://github.com/DarkSunHD/STM32F1_MIDI_Serial_Bridge/blob/master/src/usbmidi.
  2. cd build
  3. cmake .. -DCMAKE_TOOLCHAIN_FILE=~/git/stm32-midi-cmake/libopencm3.cmake -DTOOLCHAIN_DIR=/path/to/gcc-arm-none-eabi-toolchain
  4. make
- 5. make install (will install using openocd)
+ 5. make install (will call flash.sh)
