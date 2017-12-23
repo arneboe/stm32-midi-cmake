@@ -13,6 +13,7 @@ link_directories(${LIBOPENCM3_DIR}/lib)
 
 include_directories(${LIBOPENCM3_DIR}/include)
         
+#change this if you want to compile for a different stm32
 set(LD_SCRIPT "${CMAKE_SOURCE_DIR}/libopencm3/lib/stm32/f1/stm32f103x8.ld")
         
 set(STM32F1_FLAGS "-mcpu=cortex-m3 -mthumb -msoft-float")

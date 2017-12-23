@@ -1,10 +1,16 @@
-# stm32f103c8t6 usb midi 
+# stm32f1 usb midi 
 
-Cmake scripts based on https://github.com/StanislavLakhtin/stm32-DS18B20
+Code for a custom usb midi controller using the super cheap stm32f103c8t6 boards.
+
+Uses libopencm3 because it contains an usb stack and all examples I could find used libopencm3.
+
+
+Cmake scripts based on:
+ * https://github.com/StanislavLakhtin/stm32-DS18B20
 
 usb midi based on:
-https://github.com/UA3MQJ/usb-midi-key
-https://github.com/DarkSunHD/STM32F1_MIDI_Serial_Bridge/blob/master/src/usbmidi.c
+ * https://github.com/UA3MQJ/usb-midi-key
+ * https://github.com/DarkSunHD/STM32F1_MIDI_Serial_Bridge/blob/master/src/usbmidi.c
 
 
 
