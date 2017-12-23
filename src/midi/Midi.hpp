@@ -75,10 +75,10 @@ public:
   
   
   //FIXME why am I only able to send 16 instead of 19 messages without breaking the stack?
+  
   /** Sends up to 16 messages in bulk.
    *  @warning messages.size() will be clamped to 16.
-   *  @note In theory we should be able to send upt to 19 messages at the same time.
-   *        However the stack seems to break if we end more than 16. No idea why. */
+   */
   bool sendCC(const CCMessage* messages, const uint8_t numMessages);
 
   /** @param errorHandler will be called in case of any errors */
