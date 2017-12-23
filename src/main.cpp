@@ -15,7 +15,7 @@ int main(void)
   rcc_periph_clock_enable(RCC_GPIOB);
 
   gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ,
-                GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
+                GPIO_CNF_OUTPUT_PUSHPULL, GPIO13); 
 
   
   Systick::init();
@@ -23,17 +23,6 @@ int main(void)
   
   uint32_t lastTime = 0;
 
-  while(1)
-  {
-    m.update();
-    
-    if(Clock::ticks - lastTime > 50000)
-    {
-      lastTime = Clock::ticks;
-      break;
-    }
-  }
-  
   while(1)
   {
     m.update();
