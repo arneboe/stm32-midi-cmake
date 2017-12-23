@@ -163,7 +163,7 @@ void Midi::init()
   dev_descr.bDeviceClass = 0;  /* device defined at interface level */
   dev_descr.bDeviceSubClass = 0;
   dev_descr.bDeviceProtocol = 0;
-  dev_descr.bMaxPacketSize0 = 64,
+  dev_descr.bMaxPacketSize0 = 64, //no other value allowed for usb high speed devices
             dev_descr.idVendor = 0x6666;  //vendor id (6666 is for prototype devices)
   dev_descr.idProduct = 0x4242; //product id (shows up in lsusb)
   dev_descr.bcdDevice = 0x0100;
@@ -193,7 +193,7 @@ void Midi::init()
   bulk_endp[0].bDescriptorType = USB_DT_ENDPOINT;
   bulk_endp[0].bEndpointAddress = 0x01;
   bulk_endp[0].bmAttributes = USB_ENDPOINT_ATTR_BULK;
-  bulk_endp[0].wMaxPacketSize = 0x40;
+  bulk_endp[0].wMaxPacketSize = 64;
   bulk_endp[0].bInterval = 0x00;
   bulk_endp[0].extra = &midi_bulk_endp[0];
   bulk_endp[0].extralen = sizeof(midi_bulk_endp[0]);
@@ -202,7 +202,7 @@ void Midi::init()
   bulk_endp[1].bDescriptorType = USB_DT_ENDPOINT;
   bulk_endp[1].bEndpointAddress = 0x81;
   bulk_endp[1].bmAttributes = USB_ENDPOINT_ATTR_BULK;
-  bulk_endp[1].wMaxPacketSize = 0x40;
+  bulk_endp[1].wMaxPacketSize = 64; 
   bulk_endp[1].bInterval = 0x00;
   bulk_endp[1].extra = &midi_bulk_endp[1];
   bulk_endp[1].extralen = sizeof(midi_bulk_endp[1]);
@@ -343,42 +343,64 @@ void Midi::init()
 
 }
 
-
-bool Midi::sendCC(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value)
+void Midi::messageToBuffer(const Midi::CCMessage& msg, char* buffer)
 {
   //see chapter 4 "USB-MIDI Event Packets" in
   // "Universal Serial Bus Device Class Definition for MIDI Devices"
   // http://www.usb.org/developers/docs/devclass_docs/midi10.pdf
-  
-  //clamp all values
-  //FIXME might be a faster way to do this
-  if(controlChannel > 119) controlChannel = 119;
-  if(value > 127) value = 127;
-  if(channel > 0xF) channel = 0xF;
-  //virtualCable is clamped by shifting (see below)
 
+  //virtualCable is clamped by shifting (see below)
   // USB framing for CC message: 4 bit | 4bit
   //                             cable | 0xB
-  const uint8_t usbFrame = (virtualCable << 4) | 0x0B;
+  const uint8_t usbFrame = (msg.virtualCable << 4) | 0x0B;
   
   //MIDI command for CC message: 4 bit | 4 bit
   //                             0xB   | midi channel
-  const uint8_t midiCommand = 0xB0 | channel;
+  const uint8_t midiCommand = 0xB0 | (msg.channel > 0xF ? 0xF : msg.channel);
   
-  
-  char buf[4] = { usbFrame, 
-                  //midi message:
-                  midiCommand,
-                  controlChannel,
-                  value,   // value [0..127]
-                };
+  //FIXME there might be a faster way to clamp the values
+  buffer[0] = usbFrame;
+  buffer[1] = midiCommand;
+  buffer[2] = msg.controlChannel > 119 ? 119 : msg.controlChannel;
+  buffer[3] = msg.value > 127 ? 127 : msg.value;
+}
 
-  if(usbd_ep_write_packet(usbd_dev, 0x81, buf, 4) != 4)
+
+bool Midi::sendCC(const CCMessage& msg)
+{
+
+  char buffer[4];
+  messageToBuffer(msg, buffer);
+  if(usbd_ep_write_packet(usbd_dev, 0x81, buffer, 4) != 4)
+  {
+    errorHandler(USB_WRITE_ERROR);
+    return false;
+  }
+  //FIXME increase fifo size if possible
+  
+  return true;
+}
+
+bool Midi::sendCC(const CCMessage* messages, const uint8_t numMessages)
+{
+  if(numMessages == 0) return true;
+  
+  char buffer[64];
+  
+  const int size = numMessages > 16 ? 16 : numMessages;
+  for(int i = 0; i < size; ++i)
+  {
+    messageToBuffer(messages[i], buffer + 4 * i);
+  }
+  
+  const int usedBufferSize = size * 4;
+  if(usbd_ep_write_packet(usbd_dev, 0x81, buffer, usedBufferSize) != usedBufferSize)
   {
     errorHandler(USB_WRITE_ERROR);
     return false;
   }
   return true;
 }
+
 
 

@@ -2,6 +2,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/audio.h>
 #include <libopencm3/usb/midi.h>
+#include <vector>
 
 class Midi
 {
@@ -10,11 +11,22 @@ public:
   enum MidiError
   {
     USB_WRITE_ERROR
+    
   };
   
   typedef void (*MidiErrHandler)(MidiError);
   
-  
+  struct CCMessage
+  {
+    uint8_t virtualCable; // range [0x0 .. 0xF]
+    uint8_t channel; // range [0x0 .. 0xF] 
+    uint8_t controlChannel; // range [0 .. 119]
+    uint8_t value; // range [0 .. 127] 
+    CCMessage() : virtualCable(0), channel(0), controlChannel(0), value(0) {}
+    CCMessage(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value) : 
+      virtualCable(virtualCable), channel(channel), controlChannel(controlChannel), value(value) {}
+  };
+    
 private:
   usbd_device* usbd_dev;
   usb_device_descriptor dev_descr;
@@ -47,26 +59,33 @@ private:
   MidiErrHandler errorHandler;
 
   void init();
+  
+  void messageToBuffer(const CCMessage& msg, char* buffer);
+  
 public:
   
   /** Send a control change message
    * Calls errorHandler in case of error
-   * @param virtualCable range [0x0 .. 0xF]
-   * @param channel range [0x0 .. 0xF] 
-   * @param controlChannel range [0 .. 119]
-   *                       see https://www.midi.org/specifications/item/table-3-control-change-messages-data-bytes-2
-   *                       for details about the meaning of different control channel numbers
-   * @param value range [0 .. 127] 
+
    * @warning ranges are enforced by clamping
+   * @note update has to be called after every send. otherwise messsages will get lost.
+   * 
    * @return False in case of error*/
-  bool sendCC(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value);
+  bool sendCC(const CCMessage& msg);
   
   
-  
+  //FIXME why am I only able to send 16 instead of 19 messages without breaking the stack?
+  /** Sends up to 16 messages in bulk.
+   *  @warning messages.size() will be clamped to 16.
+   *  @note In theory we should be able to send upt to 19 messages at the same time.
+   *        However the stack seems to break if we end more than 16. No idea why. */
+  bool sendCC(const CCMessage* messages, const uint8_t numMessages);
 
   /** @param errorHandler will be called in case of any errors */
   Midi(MidiErrHandler errorHandler);
   
+  //FIXME wait till buffers are cleared?!
+  /** @warning method returns before buffers are cleared?! No idea why */
   void update();
 };
 

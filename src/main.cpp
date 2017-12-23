@@ -63,7 +63,8 @@ void midiTest(Midi& m)
     {
       lastTime = Clock::ticks;
       
-      m.sendCC(0, channel, 0, 42);
+      m.sendCC(Midi::CCMessage(0, channel, 0, 42));     
+      
       ++channel;
       if(channel > 20) break;
     }
@@ -77,7 +78,7 @@ void midiTest(Midi& m)
     {
       lastTime = Clock::ticks;
       
-      m.sendCC(0, 0, controlChannel, 42);
+      m.sendCC(Midi::CCMessage(0, 0, controlChannel, 42));
       ++controlChannel;
       if(controlChannel > 140) break;
     }
@@ -91,11 +92,34 @@ void midiTest(Midi& m)
     {
       lastTime = Clock::ticks;
       
-      m.sendCC(0, 0, 42, value);
+      m.sendCC(Midi::CCMessage(0, 0, 42, value));
       ++value;
       if(value > 140) break;
     }
   }
+  
+  m.update();
+
+  m.update();
+  Midi::CCMessage messages2[22];
+  for(int i = 0; i < 22; ++i)
+  {
+    messages2[i] = Midi::CCMessage(0, 0, 0, 16);
+  }
+  m.sendCC(messages2, 22);
+
+  m.update();
+  Clock::delayMs(100);
+  
+  Midi::CCMessage messages[10];
+  for(int i = 0; i < 10; ++i)
+  {
+    messages[i] = Midi::CCMessage(0, 0, 0, 10);
+  }
+  m.sendCC(messages, 10);
+  m.update();
+  
+
+  m.update();
+  
 }
-
-
