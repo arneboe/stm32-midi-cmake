@@ -141,7 +141,7 @@ static void usbmidi_data_rx_cb(usbd_device* dev, uint8_t ep)
   }
 }
 
-Midi::Midi()
+Midi::Midi(MidiErrHandler errorHandler) : errorHandler(errorHandler)
 {
   init();
 }
@@ -327,8 +327,8 @@ void Midi::init()
                        usb_strings, 3,
                        usbd_control_buffer, sizeof(usbd_control_buffer));
 
-  
-  usbd_register_set_config_callback(usbd_dev, [] (usbd_device* dev, uint16_t wValue)
+
+  usbd_register_set_config_callback(usbd_dev, [](usbd_device * dev, uint16_t wValue)
   {
     //receive on this endpoint
     usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
@@ -336,40 +336,49 @@ void Midi::init()
     //send on this endpoint
     usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
   });
-  
+
   //FIXME here we should wait for the config lambda to be called, otherwise the user might send
   //      a message before the endpoints are created. However this is not possible because we cannot
   //      access object state from within the callback :/
-  
+
 }
 
 
-void Midi::send()
+bool Midi::sendCC(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value)
 {
-  char buf[4] = { 0x0B, // USB framing: virtual cable 0, B = CC message
+  //see chapter 4 "USB-MIDI Event Packets" in
+  // "Universal Serial Bus Device Class Definition for MIDI Devices"
+  // http://www.usb.org/developers/docs/devclass_docs/midi10.pdf
+  
+  //clamp all values
+  //FIXME might be a faster way to do this
+  if(controlChannel > 119) controlChannel = 119;
+  if(value > 127) value = 127;
+  if(channel > 0xF) channel = 0xF;
+  //virtualCable is clamped by shifting (see below)
+
+  // USB framing for CC message: 4 bit | 4bit
+  //                             cable | 0xB
+  const uint8_t usbFrame = (virtualCable << 4) | 0x0B;
+  
+  //MIDI command for CC message: 4 bit | 4 bit
+  //                             0xB   | midi channel
+  const uint8_t midiCommand = 0xB0 | channel;
+  
+  
+  char buf[4] = { usbFrame, 
                   //midi message:
-                  0xB0, // MIDI command: B = CC, 0 = channel 0 
-                  0x03, // control channel 3
-                  30,   // value [0..127]
+                  midiCommand,
+                  controlChannel,
+                  value,   // value [0..127]
                 };
 
   if(usbd_ep_write_packet(usbd_dev, 0x81, buf, 4) != 4)
   {
-    //write failed
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
-    gpio_toggle(GPIOC, GPIO13);
-    Clock::delayMs(40);
+    errorHandler(USB_WRITE_ERROR);
+    return false;
   }
+  return true;
 }
+
 

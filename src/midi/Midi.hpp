@@ -5,6 +5,16 @@
 
 class Midi
 {
+public:
+  //TODO implement more errors
+  enum MidiError
+  {
+    USB_WRITE_ERROR
+  };
+  
+  typedef void (*MidiErrHandler)(MidiError);
+  
+  
 private:
   usbd_device* usbd_dev;
   usb_device_descriptor dev_descr;
@@ -33,15 +43,30 @@ private:
   usb_config_descriptor config;
   const char* usb_strings[3];
   uint8_t usbd_control_buffer[128]; /* << Buffer to be used for control requests. */
+  
+  MidiErrHandler errorHandler;
 
   void init();
 public:
   
-  void sendCC();
+  /** Send a control change message
+   * Calls errorHandler in case of error
+   * @param virtualCable range [0x0 .. 0xF]
+   * @param channel range [0x0 .. 0xF] 
+   * @param controlChannel range [0 .. 119]
+   *                       see https://www.midi.org/specifications/item/table-3-control-change-messages-data-bytes-2
+   *                       for details about the meaning of different control channel numbers
+   * @param value range [0 .. 127] 
+   * @warning ranges are enforced by clamping
+   * @return False in case of error*/
+  bool sendCC(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value);
   
-  void send();
   
-  Midi();
+  
+
+  /** @param errorHandler will be called in case of any errors */
+  Midi(MidiErrHandler errorHandler);
+  
   void update();
 };
 
