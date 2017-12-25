@@ -1,6 +1,7 @@
-#include "midi/Midi.hpp"
-#include "clock/Clock.hpp"
-#include "adc/Adc.hpp"
+#include <Midi.hpp>
+#include <Clock.hpp>
+#include <Adc.hpp>
+#include <Faders.hpp>
 #include "Systick.hpp"
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
@@ -29,11 +30,7 @@ void midiErrorHandler(Midi::MidiError err)
 // void midiTest(Midi& m);
 
 
-//from arduino
-int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
+
 
 int main(void)
 {
@@ -53,6 +50,8 @@ int main(void)
   //also initializing the adc while midi is still initializing seems to freeze the stm32... man i dont understand this hardware :D
 
   Adc adc;
+  Faders faders(adc);
+  
   Midi::CCMessage messages[8];
   for(int i = 0; i < 8; ++i)
   {
@@ -66,10 +65,10 @@ int main(void)
     if(Clock::ticks - lastTime > 500)
     {
       lastTime = Clock::ticks;
-      adc.update();
-      for(int i = 0; i < 8; ++i)
+      faders.update();
+      for(int i = 0; i < faders.numFaders(); ++i)
       {
-        messages[i].value = map(adc.values[i], 0, 4096, 0, 128);
+        messages[i].value = faders.getFaderValue(i);
       }
       m.sendCC(messages, 8);
     }

@@ -402,7 +402,7 @@ bool Midi::sendCC(const CCMessage* messages, const uint8_t numMessages)
   return true;
 }
 
-
+ 
 
 //some test code
 
