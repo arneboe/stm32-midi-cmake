@@ -11,7 +11,7 @@ class Faders
   struct Fader
   {
     uint16_t rawValue = 0;
-    bool isLogarithmic = true;
+    bool isLogarithmic = false;
     
     /** converts to linear/logarithmic and range [0..127] */
     uint16_t getConvertedValue() const;

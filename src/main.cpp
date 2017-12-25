@@ -3,11 +3,23 @@
 #include <Adc.hpp>
 #include <Faders.hpp>
 #include "Systick.hpp"
+#include <Usart.hpp>
+#include <stdio.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/dma.h>
 
+
+//for printf
+extern "C" 
+{
+  int _write(int file, char* ptr, int len)
+  {
+    return Usart::write(ptr, len);
+  }
+
+}
 
 void midiErrorHandler(Midi::MidiError err)
 {
@@ -44,8 +56,9 @@ int main(void)
   
   Systick::init();//has to be done asap because most libs use it during init
   
+  Usart::init();
+  
   Midi m(midiErrorHandler);
-
   Clock::delayMs(500); //wait for midi end points to be created (see comment in Midi.cpp for why we need this)
   //also initializing the adc while midi is still initializing seems to freeze the stm32... man i dont understand this hardware :D
 
@@ -64,8 +77,13 @@ int main(void)
     m.update();
     if(Clock::ticks - lastTime > 500)
     {
+      Usart::write("AA\n", 3);
+      
       lastTime = Clock::ticks;
       faders.update();
+      
+      printf("raw / mapped: %d / %d\n", adc.values[0], faders.getFaderValue(0));
+      
       for(int i = 0; i < faders.numFaders(); ++i)
       {
         messages[i].value = faders.getFaderValue(i);
