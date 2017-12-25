@@ -1,8 +1,11 @@
-#include "Midi.hpp"
-#include "Clock.hpp"
+#include "midi/Midi.hpp"
+#include "clock/Clock.hpp"
+#include "adc/Adc.hpp"
 #include "Systick.hpp"
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/dma.h>
 
 
 void midiErrorHandler(Midi::MidiError err)
@@ -23,103 +26,52 @@ void midiErrorHandler(Midi::MidiError err)
 
 
 //spam lots of midi messages to test functionality
-void midiTest(Midi& m);
+// void midiTest(Midi& m);
 
+
+//from arduino
+int32_t map(int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 int main(void)
 {
-  rcc_clock_setup_in_hse_8mhz_out_72mhz();
+  rcc_clock_setup_in_hse_8mhz_out_72mhz();//this also sets the adc prescaler
   
   rcc_periph_clock_enable(RCC_GPIOC);
   rcc_periph_clock_enable(RCC_GPIOB);
 
   gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ,
                 GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
-
-  Systick::init();
+  
+  Systick::init();//has to be done asap because most libs use it during init
+  
   Midi m(midiErrorHandler);
 
   Clock::delayMs(500); //wait for midi end points to be created (see comment in Midi.cpp for why we need this)
+  //also initializing the adc while midi is still initializing seems to freeze the stm32... man i dont understand this hardware :D
 
-  midiTest(m);
-
-  while(1)
+  Adc adc;
+  Midi::CCMessage messages[8];
+  for(int i = 0; i < 8; ++i)
   {
-    m.update();
+    messages[i] = Midi::CCMessage(0, 0, i, 0);
   }
   
-}
-
-void midiTest(Midi& m)
-{
   uint32_t lastTime = 0;
-
-  uint8_t channel = 0;
-  
   while(1)
-  {
+  { 
     m.update();
     if(Clock::ticks - lastTime > 500)
     {
       lastTime = Clock::ticks;
-      
-      m.sendCC(Midi::CCMessage(0, channel, 0, 42));     
-      
-      ++channel;
-      if(channel > 20) break;
+      adc.update();
+      for(int i = 0; i < 8; ++i)
+      {
+        messages[i].value = map(adc.values[i], 0, 4096, 0, 128);
+      }
+      m.sendCC(messages, 8);
     }
   }
-  
-  uint8_t controlChannel = 0;
-  while(1)
-  {
-    m.update();
-    if(Clock::ticks - lastTime > 50)
-    {
-      lastTime = Clock::ticks;
-      
-      m.sendCC(Midi::CCMessage(0, 0, controlChannel, 42));
-      ++controlChannel;
-      if(controlChannel > 140) break;
-    }
-  }
-  
-  uint8_t value = 0;
-  while(1)
-  {
-    m.update();
-    if(Clock::ticks - lastTime > 50)
-    {
-      lastTime = Clock::ticks;
-      
-      m.sendCC(Midi::CCMessage(0, 0, 42, value));
-      ++value;
-      if(value > 140) break;
-    }
-  }
-  
-  m.update();
-
-  m.update();
-  Midi::CCMessage messages2[22];
-  for(int i = 0; i < 22; ++i)
-  {
-    messages2[i] = Midi::CCMessage(0, 0, 0, 16);
-  }
-  m.sendCC(messages2, 22);
-
-  m.update();
-  Clock::delayMs(100);
-  
-  Midi::CCMessage messages[10];
-  for(int i = 0; i < 10; ++i)
-  {
-    messages[i] = Midi::CCMessage(0, 0, 0, 10);
-  }
-  m.sendCC(messages, 10);
-  m.update();
-  
-
-  m.update();
-  
 }
