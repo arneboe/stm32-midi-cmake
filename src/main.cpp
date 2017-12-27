@@ -40,6 +40,8 @@ int main(void)
 
   //Also initializes the clock
   Systick::init();//has to be done asap because most libs use it during init
+  
+  //for debugging, printf writes to usart
   Usart::init();
 
   Midi midi(midiErrorHandler);
@@ -51,6 +53,7 @@ int main(void)
   
   //this starts the main logic "thread"
   Control ctrl(midi, faders);
+
 
   //main thread updates usb as fast as possible, will get interrupted by timers
   while(1)

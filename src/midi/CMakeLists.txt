@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.0)
 
 
 set(SOURCES 
-    Midi.cpp)
+    Midi.cpp
+    MidiMessage.cpp)
 
 add_library(midi STATIC ${SOURCES})
     

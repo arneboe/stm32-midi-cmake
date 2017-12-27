@@ -58,7 +58,7 @@ Control::Control(Midi& midi, Faders& faders) : midi(midi), faders(faders)
 void Control::sendFaderData() const
 {
   //message buffer is reused every time
-  static Midi::CCMessage messages[Faders::NUM_FADERS];
+  static CCMessage messages[Faders::NUM_FADERS];
   
   //used to remember the last values and avoid spam,
   //255 can never happen in midi thus it is a good initial value

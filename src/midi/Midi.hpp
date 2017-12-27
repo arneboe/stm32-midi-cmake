@@ -3,6 +3,9 @@
 #include <libopencm3/usb/audio.h>
 #include <libopencm3/usb/midi.h>
 #include <vector>
+#include "MidiMessage.hpp"
+
+//FIXME const corectness :)
 
 class Midi
 {
@@ -16,16 +19,7 @@ public:
   
   typedef void (*MidiErrHandler)(MidiError);
   
-  struct CCMessage
-  {
-    uint8_t virtualCable; // range [0x0 .. 0xF]
-    uint8_t channel; // range [0x0 .. 0xF] 
-    uint8_t controlChannel; // range [0 .. 119]
-    uint8_t value; // range [0 .. 127] 
-    CCMessage() : virtualCable(0), channel(0), controlChannel(0), value(0) {}
-    CCMessage(uint8_t virtualCable, uint8_t channel, uint8_t controlChannel, uint8_t value) : 
-      virtualCable(virtualCable), channel(channel), controlChannel(controlChannel), value(value) {}
-  };
+  
     
 private:
   usbd_device* usbd_dev;
@@ -59,9 +53,7 @@ private:
   MidiErrHandler errorHandler;
 
   void init();
-  
-  void messageToBuffer(const CCMessage& msg, char* buffer);
-  
+
 public:
   
   /** Send a control change message
@@ -69,7 +61,7 @@ public:
 
    * @warning ranges are enforced by clamping
    * @note update has to be called after every send. otherwise messsages will get lost.
-   * 
+           If you need to send more than one msg, use the bulk version below.
    * @return False in case of error*/
   bool sendCC(const CCMessage& msg);
   
@@ -80,6 +72,15 @@ public:
    *  @warning messages.size() will be clamped to 16.
    */
   bool sendCC(const CCMessage* messages, const uint8_t numMessages);
+  
+  /** Sends a note on/off message.
+    * Calls errorHandler in case of error
+    * @warning ranges are enforced by clamping, no waring is generated
+    * @note update has to be called after every send. otherwise messages wil get lost.
+    *       If you need to send more than one msg, use the bulk version below.
+    * @return False in case of error. */
+  bool sendNote(const NoteMessage& msg);
+  bool sendNote(const NoteMessage* messages, const uint8_t numMessages);
 
   /** @param errorHandler will be called in case of any errors */
   Midi(MidiErrHandler errorHandler);

@@ -343,34 +343,11 @@ void Midi::init()
 
 }
 
-void Midi::messageToBuffer(const Midi::CCMessage& msg, char* buffer)
-{
-  //see chapter 4 "USB-MIDI Event Packets" in
-  // "Universal Serial Bus Device Class Definition for MIDI Devices"
-  // http://www.usb.org/developers/docs/devclass_docs/midi10.pdf
-
-  //virtualCable is clamped by shifting (see below)
-  // USB framing for CC message: 4 bit | 4bit
-  //                             cable | 0xB
-  const uint8_t usbFrame = (msg.virtualCable << 4) | 0x0B;
-  
-  //MIDI command for CC message: 4 bit | 4 bit
-  //                             0xB   | midi channel
-  const uint8_t midiCommand = 0xB0 | (msg.channel > 0xF ? 0xF : msg.channel);
-  
-  //FIXME there might be a faster way to clamp the values
-  buffer[0] = usbFrame;
-  buffer[1] = midiCommand;
-  buffer[2] = msg.controlChannel > 119 ? 119 : msg.controlChannel;
-  buffer[3] = msg.value > 127 ? 127 : msg.value;
-}
-
-
 bool Midi::sendCC(const CCMessage& msg)
 {
 
   char buffer[4];
-  messageToBuffer(msg, buffer);
+  msg.toBuffer(buffer, 4);
   if(usbd_ep_write_packet(usbd_dev, 0x81, buffer, 4) != 4)
   {
     errorHandler(USB_WRITE_ERROR);
@@ -390,7 +367,7 @@ bool Midi::sendCC(const CCMessage* messages, const uint8_t numMessages)
   const int size = numMessages > 16 ? 16 : numMessages;
   for(int i = 0; i < size; ++i)
   {
-    messageToBuffer(messages[i], buffer + 4 * i);
+    messages[i].toBuffer(buffer + 4 * i, 4);
   }
   
   const int usedBufferSize = size * 4;
@@ -401,6 +378,44 @@ bool Midi::sendCC(const CCMessage* messages, const uint8_t numMessages)
   }
   return true;
 }
+
+bool Midi::sendNote(const NoteMessage& msg)
+{
+  //FIXME duplicate code from sendCC, would introduce a vtable?!
+  char buffer[4];
+  msg.toBuffer(buffer, 4);
+  if(usbd_ep_write_packet(usbd_dev, 0x81, buffer, 4) != 4)
+  {
+    errorHandler(USB_WRITE_ERROR);
+    return false;
+  }
+  return true;  
+}
+
+
+bool Midi::sendNote(const NoteMessage* messages, const uint8_t numMessages)
+{
+  //FIXME duplicate code from sendCC
+  if(numMessages == 0) return true;
+  
+  char buffer[64];
+  
+  const int size = numMessages > 16 ? 16 : numMessages;
+  for(int i = 0; i < size; ++i)
+  {
+    messages[i].toBuffer(buffer + 4 * i, 4);
+  }
+  
+  const int usedBufferSize = size * 4;
+  if(usbd_ep_write_packet(usbd_dev, 0x81, buffer, usedBufferSize) != usedBufferSize)
+  {
+    errorHandler(USB_WRITE_ERROR);
+    return false;
+  }
+  return true;
+}
+
+
 
  
 
