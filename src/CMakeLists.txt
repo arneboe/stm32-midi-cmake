@@ -7,6 +7,7 @@ include_directories(midi)
 include_directories(adc)
 include_directories(fader)
 include_directories(usart)
+include_directories(control)
 
 
 add_subdirectory(clock)
@@ -14,6 +15,7 @@ add_subdirectory(adc)
 add_subdirectory(fader)
 add_subdirectory(midi)
 add_subdirectory(usart)
+add_subdirectory(control)
 
 
 set(SOURCES 
@@ -28,7 +30,8 @@ target_link_libraries(${PROJECT_NAME}.elf
                       fader
                       clock
                       midi
-                      usart)
+                      usart
+                      control)
 
 include_directories(${LIBOPENCM3_DIR}/include)
 
