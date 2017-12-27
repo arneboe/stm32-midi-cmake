@@ -21,7 +21,7 @@ Adc::Adc()
   adc_disable_external_trigger_regular(ADC1);
   adc_set_right_aligned(ADC1);
   //adc_enable_temperature_sensor();
-  adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_71DOT5CYC);
+  adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
 
   adc_power_on(ADC1);
   //wait for adc to stabilize
@@ -37,13 +37,22 @@ void Adc::update()
 {
   //TODO add multiplexing to read more than 8 values
   //TODO use dma
-  for(uint8_t channel = 0; channel < NUM_ADC; ++channel)
-  {
-    adc_set_regular_sequence(ADC1, 1, &channel);
-    adc_start_conversion_direct(ADC1);
-    while(!(adc_eoc(ADC1))); //wait for adc to finish conversion
-    values[channel] = adc_read_regular(ADC1);
-  }
+
+    for(uint8_t channel = 0; channel < NUM_ADC; ++channel)
+    {
+      //we sample 50 times. With the naiv aproach this takes about 2ms...
+      uint32_t sum = 0;
+      const uint16_t numSamples = 300;
+      
+      for(int i = 0; i < numSamples; ++i)
+      {
+        adc_set_regular_sequence(ADC1, 1, &channel);
+        adc_start_conversion_direct(ADC1);
+        while(!(adc_eoc(ADC1))); //wait for adc to finish conversion
+        sum += adc_read_regular(ADC1);
+      }
+      values[channel] = (int)(sum / ((float)numSamples) + 0.5f);
+    }
 }
 
 
