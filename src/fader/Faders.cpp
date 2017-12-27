@@ -55,21 +55,16 @@ uint16_t Faders::Fader::getConvertedValue() const
 
 uint8_t Faders::getFaderValue(uint8_t faderIndex) const
 {
-  if(faderIndex < numFaders())
+  if(faderIndex < NUM_FADERS)
   {
     return faders[faderIndex].getConvertedValue();
   }
   return 0;
 }
 
-uint8_t Faders::numFaders() const
-{
-  return Adc::NUM_ADC;
-}
-
 void Faders::setFaderLog(uint8_t faderIndex, bool value)
 {
-  if(faderIndex < numFaders())
+  if(faderIndex < NUM_FADERS)
   {
     faders[faderIndex].isLogarithmic = value;
   }
@@ -79,7 +74,7 @@ void Faders::update()
 {
   adc.update();
   
-  for(int i = 0; i < numFaders(); ++i)
+  for(int i = 0; i < NUM_FADERS; ++i)
   {
     faders[i].rawValue = adc.values[i];
   }

@@ -7,8 +7,11 @@
 /** A collection of faders */
 class Faders
 {
+public:
+  static const uint8_t NUM_FADERS = Adc::NUM_ADC;
   
-  struct Fader
+private:
+    struct Fader
   {
     uint16_t rawValue = 0;
     bool isLogarithmic = false;
@@ -30,8 +33,6 @@ public:
   
   /** @parma value True => fader is logarithmic, False => fader is linear. */
   void setFaderLog(uint8_t faderIndex, bool value);
-  
-  uint8_t numFaders() const;
   
   uint8_t getFaderValue(uint8_t faderIndex) const;
   
